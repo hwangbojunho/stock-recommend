@@ -19,3 +19,4 @@ WORKDIR /app
 COPY --from=backend-build /app/backend/build/libs/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
+
