@@ -10,9 +10,14 @@
 ## 배포
 
 - 루트 `Dockerfile`: 프론트엔드(Vite build) → 백엔드 `src/main/resources/static`에 포함 → Spring Boot가 정적 파일 + `/api/**`를 같은 origin/포트로 서빙하는 단일 이미지 빌드
-- `server.port=${PORT:8080}`, `spring.datasource.url=jdbc:h2:file:${DB_PATH:./data/stockdb};AUTO_SERVER=TRUE` — Render 등에서 `PORT`/`DB_PATH` 환경변수로 오버라이드 가능
+- `server.port=${PORT:8080}` — Render 등에서 `PORT` 환경변수로 오버라이드 가능
 - 프론트 `BASE_URL`(`stockApi.js`)은 `import.meta.env.DEV`일 때만 `http://<host>:8080`을 사용하고, 프로덕션 빌드에서는 같은 origin의 상대경로(`/api/...`)를 사용
-- 주의: Render의 기본 디스크는 재배포/재시작 시 초기화되는 ephemeral storage이므로, `DB_PATH`를 영속 디스크(persistent disk) 경로로 지정하지 않으면 재배포마다 전체 갱신(약 22분)이 다시 실행됨
+- **DB**: 스프링 프로필로 로컬(H2)/운영(PostgreSQL)을 분리
+  - `application.properties`: `spring.profiles.active=${SPRING_PROFILES_ACTIVE:local}` (기본값은 `local`)
+  - `application-local.properties`: H2 파일 DB (`./data/stockdb`)
+  - `application-prod.properties`: PostgreSQL — `spring.datasource.url=${DB_URL}`, `driver-class-name=org.postgresql.Driver`, `username=${DB_USERNAME}`, `password=${DB_PASSWORD}`
+  - Render 배포 시 환경변수: `SPRING_PROFILES_ACTIVE=prod`, `DB_URL=jdbc:postgresql://<host>:5432/<db>`, `DB_USERNAME`, `DB_PASSWORD` (Render Postgres 대시보드의 접속 정보 사용)
+  - PostgreSQL(Render 무료 플랜)은 영구 저장소이므로, 재배포해도 데이터가 유지되고 24시간 전체 갱신만 다시 일어남 (H2 ephemeral storage 문제 해소)
 
 ## 주요 화면 (frontend)
 
