@@ -40,9 +40,10 @@
 ## 코스피 전체 종목 DB 영속화 (`KospiStockListService`)
 
 - 코스피 상장 종목은 약 950개이며, 종목 1개당 네이버 API를 3번(basic/integration/finance) 호출하므로 전체 조회 시 약 2,800회의 외부 호출이 발생함
-- 요청-응답 경로에서 이를 수행하면 느리므로, 백그라운드 스케줄러(`@Scheduled`, 24시간 주기)가 전용 스레드풀(20개 동시 호출)로 전체 종목을 수집하면서, 종목별로 점수(`StockScoreCalculator.calculate`)까지 계산해 완료되는 즉시 H2 DB(`stock_analysis` 테이블, `StockAnalysisRepository`)에 upsert함
+- 요청-응답 경로에서 이를 수행하면 느리므로, 백그라운드 스케줄러(`@Scheduled(cron = "0 0 20 * * *", zone = "Asia/Seoul")`, 매일 오후 8시)가 전용 스레드풀(20개 동시 호출)로 전체 종목을 수집하면서, 종목별로 점수(`StockScoreCalculator.calculate`)까지 계산해 완료되는 즉시 H2 DB(`stock_analysis` 테이블, `StockAnalysisRepository`)에 upsert함
+- DB에 이미 당일(KST) `updatedAt`이 있는 종목은 갱신 대상에서 제외(외부 API 재호출 안 함) — 중간에 중단되었다가 재시작해도 그날 이미 처리한 종목은 건너뛰고 나머지만 이어서 처리
 - DB 영속화 덕분에 서버를 재시작해도 직전 갱신 결과가 즉시 조회됨 — 갱신이 끝나기 전(또는 서버 첫 기동 직후 DB가 비어있을 때)에는 그 시점까지 저장된 종목만 반환됨(`updatedAt`은 저장된 row들의 `updatedAt` 중 최댓값)
-- 서버 기동 시 1회 즉시 갱신 시작. 실측 약 22분(948개 종목) 소요. 50개 단위로 진행 로그 출력
+- 서버 기동 시(`ApplicationReadyEvent`)에도 1회 갱신 시작(가상 스레드로 비동기 실행, 당일 데이터가 있으면 건너뛰므로 중복 호출 없음). 실측 약 22분(948개 종목) 소요. 종목별로 진행 로그 출력
 - 종목 코드 목록은 네이버 랭킹 API(`marketValue/KOSPI`, 페이지당 최대 100개)를 페이지네이션하여 수집, `stockEndType=stock`만 필터링(ETF/ETN 제외)
 - H2 DB 파일은 `backend/data/stockdb.mv.db`(`.gitignore`로 제외), `jdbc:h2:file:./data/stockdb;AUTO_SERVER=TRUE`, `spring.jpa.hibernate.ddl-auto=update`
 - `StockUniverseService`의 유니버스 캐시(`getUniverseCodes`/`getUniverseMetrics`)는 `@Cacheable(sync = true)`로 설정. 점수 계산이 내부적으로 유니버스 백분위를 조회하므로, 20개 스레드가 동시에 점수를 계산할 때 캐시 미스 시 한 스레드만 실제로 계산하고 나머지는 결과를 기다리도록 해 "캐시 stampede"(중복 계산)를 방지

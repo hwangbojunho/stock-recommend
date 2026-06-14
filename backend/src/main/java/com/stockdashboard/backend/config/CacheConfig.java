@@ -26,9 +26,9 @@ public class CacheConfig {
                 .maximumSize(1000));
         cacheManager.setCacheNames(List.of(STOCK_METRICS_CACHE));
         cacheManager.registerCustomCache(UNIVERSE_CODES_CACHE,
-                Caffeine.newBuilder().expireAfterWrite(Duration.ofHours(6)).maximumSize(1).build());
+                Caffeine.newBuilder().expireAfterWrite(Duration.ofHours(24)).maximumSize(1).build());
         cacheManager.registerCustomCache(UNIVERSE_METRICS_CACHE,
-                Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(10)).maximumSize(1).build());
+                Caffeine.newBuilder().expireAfterWrite(Duration.ofHours(24)).maximumSize(1).build());
         return cacheManager;
     }
 }
