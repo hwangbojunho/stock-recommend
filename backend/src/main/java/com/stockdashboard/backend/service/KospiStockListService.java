@@ -91,10 +91,9 @@ public class KospiStockListService {
                         saved.incrementAndGet();
                     }
                     int done = progress.incrementAndGet();
-                    if (done % 50 == 0 || done == total) {
-                        log.info("코스피 전체 종목 갱신 진행: {}/{} ({}ms 경과)",
-                                done, total, Duration.between(start, Instant.now()).toMillis());
-                    }
+                    log.info("코스피 종목 갱신 [{}/{}] {} {} ({}ms 경과)",
+                            done, total, code, metrics != null ? metrics.name() : "(실패)",
+                            Duration.between(start, Instant.now()).toMillis());
                 }, executor))
                 .toList();
 
